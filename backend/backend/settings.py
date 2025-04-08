@@ -64,7 +64,7 @@ INSTALLED_APPS = [
     "api_users",
     "api_education",
     "api_posts",
-    "prueba",
+    "api_ia_model",
 ]
 
 
