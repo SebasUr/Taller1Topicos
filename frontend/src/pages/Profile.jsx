@@ -1,134 +1,113 @@
-import React, { useContext, useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import api from "../api"
-import { AuthContext } from "../contexts/AuthContext"
+import { useState, useEffect } from "react";
+import api from "../api";
+import "../styles/Profile.css";
+import defaultAvatar from "../assets/User_pic.jpg";
+import {
+    TwitterShareButton,
+    WhatsappShareButton,
+    TwitterIcon,
+    WhatsappIcon,
+} from "react-share"
 
-function Profile() {
-    const { isAuthorized, auth } = useContext(AuthContext)
-    const [loading, setLoading] = useState(true)
-    const [userData, setUserData] = useState({})
-    const [courses, setCourses] = useState([])
-    const [certifications, setCertifications] = useState([])
-    const navigate = useNavigate()
+export default function Profile() {
+    const [user, setUser] = useState({});
+    const [date, setDate] = useState("");
+    const [achievements, setAchievements] = useState([]);
 
     useEffect(() => {
-        auth()
-    }, [auth])
-
-    useEffect(() => {
+        // Obtener información del perfil del usuario
         api.get("/users/api/user/profile/")
-        .then((res) => res.data)
-        .then((data) => {
-            setUserData(data)
-            setCourses(data.courses.courses)
-            setCertifications(data.certifications.certifications)
-        })
-        .finally(() => {
-            setLoading(false)
-        })
-    }, [userData])
-
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-
-        const coursesName = document.getElementById("courses-name").value
-        const coursesDescription = document.getElementById("courses-description").value
-        const certificationName = document.getElementById("certification-name").value
-        const certificationInstitution = document.getElementById("certification-institution").value
-
-        const newCourse = coursesName && coursesDescription ? { title: coursesName, description: coursesDescription } : null
-        const newCertification = certificationName && certificationInstitution ? { title: certificationName, institution: certificationInstitution } : null
-
-        if (newCourse) {
-            setCourses((prevCourses) => [...prevCourses, newCourse])
-        }
-        if (newCertification) {
-            setCertifications((prevCertifications) => [...prevCertifications, newCertification])
-        }
-
-        const data = {
-            courses: {
-                courses: newCourse ? [...courses, newCourse] : [...courses]
-            },
-            certifications: {
-                certifications: newCertification ? [...certifications, newCertification] : [...certifications]
-            }
-        }
-
-        await api.patch("/users/api/user/profile/", data)
-            .then(() => {
-                alert("Datos actualizados")
+            .then((res) => {
+                setUser(res.data);
+                setDate(new Date(res.data.created_at).toDateString());
             })
-            .catch((err) => {
-                alert("Ocurrió un error")
-                console.error(err)
+            .catch((err) => console.log(err));
+
+        // Obtener módulos y sus progresos completados
+        api.get("/education/api/modules/")
+            .then((res) => res.data)
+            .then((modules) => {
+                const progressPromises = modules.map((module) =>
+                    api.get(`/education/api/modules/${module.id}/progress/`)
+                        .then((res) => ({
+                            module,
+                            progress: res.data.progress_percentage
+                        }))
+                        .catch((err) => {
+                            console.log(err);
+                            return null;
+                        })
+                );
+
+                // Esperar a que todas las promesas de progreso se completen
+                Promise.all(progressPromises).then((results) => {
+                    const completedModules = results
+                        .filter((result) => result && result.progress === 100)
+                        .map((result) => ({
+                            emoji: "🏆",
+                            label: result.module.title
+                        }));
+
+                    setAchievements(completedModules);
+                });
             })
-            .finally(() => {
-                // Limpiar los campos del formulario
-                document.getElementById("courses-name").value = ""
-                document.getElementById("courses-description").value = ""
-                document.getElementById("certification-name").value = ""
-                document.getElementById("certification-institution").value = ""
-            })
+            .catch((err) => console.log(err));
+    }, []);
+
+    const profile = {
+        avatarUrl: user.avatar_url || defaultAvatar,
+        username: user.username || "@username",
+        email: user.email,
+        bio: user.bio || "User bio goes here.",
     }
 
-    if (!isAuthorized) {
-        alert("No estás autorizado para ver esta página")
-        navigate("/login")
-    }
-
-    if (loading) {
-        return <p>Cargando...</p>
-    }
+    const shareText = `He completado estos módulos en Lumiere: ${achievements.map(a => a.label).join(", ")}! 🎉 Aprende más aquí: `
+    const shareUrl = "http://localhost:3000/"
 
     return (
-        <>
-            <br /><br /><br /><br /><br /><br /><br />
-            <p>Username: { userData.username }</p>
-            <p>Email: { userData.email }</p>
-            <p>Última trayectoria: { userData.last_trayectory || "No tienes trayectorías guardadas" }</p>
-            <p><strong>Cursos:</strong></p>
-            {
-                courses.length > 0 ? (
-                    courses.map((course, index) => (
-                        <li key={index}>- { course.title } - { course.description }</li>
-                    ))
-                ) : (
-                    <p><strong>No tienes cursos registrados</strong></p>
-                )
-            }
-            <br />
-            <p><strong>Certificaciones:</strong></p>
-            {
-                certifications.length > 0 ? (
-                    certifications.map((certification, index) => (
-                        <li key={index}>- { certification.title } - { certification.institution }</li>
-                    ))
-                ) : (
-                    <p><strong>No tienes certificaciones registradas</strong></p>
-                )
-            }
-            <br />
-            <h2>Actualiza tus datos (cursos y certificaciones):</h2>
-            <form onSubmit={handleSubmit}>
-                <br />
-                <h3>Sobre cursos:</h3>
-                <label htmlFor="">Nombre del curso</label>
-                <input type="text" id="courses-name"/>
-                <br />
-                <label htmlFor="">Descripción breve del curso:</label>
-                <input type="text" id="courses-description" />
-                <br /><br />
-                <h3>Sobre certificaciones:</h3>
-                <label htmlFor="">Nombre de la certificación:</label>
-                <input type="text" id="certification-name" />
-                <br />
-                <label htmlFor="">Institución encargada de la certificación:</label>
-                <input type="text" id="certification-institution" />
-                <button type="submit">Actualizar</button>
-            </form>
-        </>
-    )
-}
+        <div className="profile-page">
+            <div className="profile-card">
+                <div className="profile-header">
+                    <img src={profile.avatarUrl} alt={profile.name} className="profile-avatar" />
+                    <div className="profile-info">
+                        <h1 className="profile-name">{profile.username}</h1>
+                        <p className="profile-created-at"><span>Se unió: </span>{date}</p>
+                    </div>
+                </div>
+                <div className="profile-content">
+                    <section className="profile-section">
+                        <h2 className="section-title">Biografía</h2>
+                        <p className="profile-bio">{profile.bio}</p>
+                    </section>
+                </div>
+                <div className="profile-content">
+                    <section className="profile-section">
+                        <h2 className="section-title">Módulos completados</h2>
+                        <div className="achievements-container">
+                            {
+                                achievements.length > 0 ? achievements.map((achievement, index) => (
+                                    <div key={index} className="achievement-card">
+                                        <span className="achievement-emoji">{achievement.emoji}</span>
+                                        <p className="achievement-label">{achievement.label}</p>
+                                    </div>
+                                )) : <p>No hay módulos completados</p>
+                            }
+                        </div>
+                    </section>
+                    <section className="profile-section">
+                        <h2>¡Comparte tus logros!</h2>
+                        <div className="share-buttons-container">
+                            <TwitterShareButton title={shareText} url={shareUrl}>
+                                <TwitterIcon size={50} round />
+                            </TwitterShareButton>
+                            <WhatsappShareButton title={shareText} url={shareUrl}>
+                                <WhatsappIcon size={50} round />
+                            </WhatsappShareButton>
+                        </div>
 
-export default Profile
+                    </section>
+                </div>
+            </div>
+        </div>
+    );
+}

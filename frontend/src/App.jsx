@@ -1,53 +1,80 @@
-import React, { useState, useEffect } from "react"
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom"
-import { Main, Steps, Profile, LoginRegister } from "./pages"
-import { AuthProvider } from "./contexts/AuthContext.jsx"
-import { LoadingScreen, Navbar } from "./components"
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { ModuleDetail, Home, LandingPage, Forum, NotFound, LoginRegister, Profile, LessonDetail, Dictionary , DialogueLesson} from "./pages";
+import { ProtectedRoute, NavBar } from "./components";
+import { AuthProvider } from "./contexts/AuthContext";
 
 function Logout() {
-	localStorage.clear()
-	return <Navigate to="/" />
+    localStorage.clear();
+    return <Navigate to="/" />;
 }
 
 function RegisterAndLogout() {
-    localStorage.clear()
-    return <LoginRegister />
+    localStorage.clear();
+    return <LoginRegister />;
+}
+
+function MainApp() {
+    const location = useLocation();
+
+    return (
+        <>
+            {/* Renderiza NavBar solo si no estás en la ruta de LessonDetail */}
+            {location.pathname !== `/module/${location.pathname.split("/")[2]}/lessons/${location.pathname.split("/")[4]}` && <NavBar />}
+            <Routes>
+                <Route path="/" element={
+                    <ProtectedRoute>
+                        <Home />
+                    </ProtectedRoute>
+                } />
+                <Route path="/forum" element={
+                    <ProtectedRoute>
+                        <Forum />
+                    </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                    <ProtectedRoute>
+                        <Profile />
+                    </ProtectedRoute>
+                } />
+                <Route path="/dictionary" element={
+                    <ProtectedRoute>
+                        <Dictionary />
+                    </ProtectedRoute>
+                } />
+                <Route path="/module/:idModule" element={
+                    <ProtectedRoute>
+                        <ModuleDetail />
+                    </ProtectedRoute>
+                } />
+                <Route path="/module/:idModule/lessons/:id" element={
+                    <ProtectedRoute>
+                        <LessonDetail />
+                    </ProtectedRoute>
+                } />
+                <Route path="/dialoguelesson" element={
+                    <ProtectedRoute>
+                        <DialogueLesson />
+                    </ProtectedRoute>
+                } />
+                <Route path="/welcome" element={<LandingPage />} />
+                <Route path="/login-register" element={<RegisterAndLogout />} />
+                <Route path="/logout" element={<Logout />} />
+                <Route path="*" element={<NotFound />} />
+                <Route path="/404" element={<NotFound />} />
+            </Routes>
+        </>
+    );
 }
 
 function App() {
-	const [loading, setLoading] = useState(true)
-
-	useEffect(() => {
-		// Configura el tiempo de carga o la lógica de la animación aquí
-		setTimeout(() => {
-			setLoading(false)
-		}, 2000) // Ajusta la duración según sea necesario
-	}, [])
-
-	return (
-		<>
-			<AuthProvider>
-				{
-					loading ? ( 
-						<LoadingScreen /> // Muestra la pantalla de carga mientras `loading` sea verdadero
-					) : (
-						<>
-							<Router>
-								<Navbar />
-								<Routes>
-									<Route path="/" element={<Main />} />
-									<Route path="/user/profile" element={<Profile />} />
-									<Route path="/steps" element={<Steps />} />
-									<Route path="/login-register" element={ <RegisterAndLogout /> } />
-									<Route path="/logout" element={ <Logout />} />
-								</Routes>
-							</Router>
-						</>
-					)
-				}
-			</AuthProvider>
-		</>
-	)
+    return (
+        <AuthProvider>
+            <BrowserRouter>
+                <MainApp />
+            </BrowserRouter>
+        </AuthProvider>
+    );
 }
 
-export default App
+export default App;
