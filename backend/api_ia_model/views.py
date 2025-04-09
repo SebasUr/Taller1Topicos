@@ -15,9 +15,19 @@ colors = [
     (245, 16, 117), (16, 245, 117)
 ]
 
+# Singleton para el recognizer
+class RecognizerSingleton:
+    _instance = None
+
+    @staticmethod
+    def get_instance():
+        if RecognizerSingleton._instance is None:
+            RecognizerSingleton._instance = MediaPipeSignRecognizer(actions)
+        return RecognizerSingleton._instance
+
 def gen_frames():
     cap = cv2.VideoCapture(0)
-    recognizer = MediaPipeSignRecognizer(actions)
+    recognizer = RecognizerSingleton.get_instance()
 
     while True:
         ret, frame = cap.read()
