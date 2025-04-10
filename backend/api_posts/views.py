@@ -22,3 +22,11 @@ class PostDelete(generics.DestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         return Post.objects.filter(author=user)
+    
+class PostUpdate(generics.UpdateAPIView):
+    serializer_class = PostSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Solo permite actualizar los posts del usuario actual
+        return Post.objects.filter(author=self.request.user)
